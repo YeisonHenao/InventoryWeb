@@ -16,6 +16,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // 3. INYECCIÓN DE DEPENDENCIAS (Patrón Repositorio y Servicio)
 builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 // 4. CONFIGURACIÓN DE CORS (Para desarrollo con Vite)
 builder.Services.AddCors(options =>
