@@ -7,20 +7,37 @@ using Microsoft.AspNetCore.Mvc;
 public class AuthController(IAuthService authService) : ControllerBase
 {
     [HttpPost("register")]
-    public async Task<IActionResult> Register(UserDto request) 
+    public async Task<Response> Register(UserDto request)
     {
-        var user = new Usuario { Nombre = request.Nombre, Email = request.Email };
-        return Ok(await authService.Registrar(user, request.Password));
+        try
+        {
+            var result = await authService.Registrar(request);
+            if (result != null)
+            {
+                return result;
+            }
+            else
+            {
+                return new Response { status = 0, Message = "Error al registrar el usuario", Data = null };
+            }
+        }
+        catch(Exception ex)
+        {
+            return new Response { status = 0, Message = ex.Message, Data = null };
+        }
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginDto request)
+    public async Task<Response> Login(LoginDto request)
     {
-        try {
+        try
+        {
             var result = await authService.Login(request.Email, request.Password);
-            return Ok(new { mensaje = result });
-        } catch (Exception ex) {
-            return BadRequest(ex.Message);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new Response { status = 0, Message = ex.Message, Data = null };
         }
     }
 }

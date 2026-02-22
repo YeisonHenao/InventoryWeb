@@ -2,7 +2,7 @@ using InventarioProyecto.Models;
 
 public interface IAuthService
 {
-    Task<string> Registrar(Usuario user, string password);
-    Task<string> Login(string email, string password);
-    Task<bool> SolicitarRecuperacion(string email);
+    Task<Response> Registrar(UserDto user);
+    Task<Response> Login(string email, string password);
+    Task<string> SolicitarRecuperacion(string email);
 }

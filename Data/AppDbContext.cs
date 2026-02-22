@@ -14,7 +14,6 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // 1. Configuración de Usuario
         modelBuilder.Entity<Usuario>(entity =>
         {
             entity.HasKey(u => u.Id);
@@ -26,7 +25,6 @@ public class AppDbContext : DbContext
             entity.Property(u => u.Id).ValueGeneratedOnAdd();
         });
 
-        // 2. Configuración de Producto (opcional, para mantener orden)
         modelBuilder.Entity<Producto>().HasKey(p => p.Id);
     }
 }
