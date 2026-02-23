@@ -33,3 +33,8 @@ public class Usuario
     // Útil para invalidar todas las sesiones si el usuario cambia la clave
     public string SecurityStamp { get; set; } = Guid.NewGuid().ToString();
 }
+
+public class UsuarioResponse : Usuario
+{
+   public string Token { get; set; } = string.Empty;
+}

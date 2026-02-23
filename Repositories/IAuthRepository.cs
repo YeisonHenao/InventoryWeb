@@ -6,6 +6,6 @@ public interface IAuthRepository
 {
     Task<Usuario> AuthenticateAsync(string username, string password);
     Task<Usuario> Register(UserDto entity);
-    Task<Usuario> Login(string Nombre, String Password);
+    Task<UsuarioResponse> Login(string Nombre, String Password);
     Task<string> SolicitarRecuperacion(string email);
 }

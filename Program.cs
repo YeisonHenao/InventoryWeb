@@ -1,30 +1,58 @@
-using Microsoft.EntityFrameworkCore;
-using InventarioProyecto.Data; // Ajusta según tu namespace
+using System.Text;
+using InventarioProyecto.Data;
 using InventarioProyecto.Repositories;
 using InventarioProyecto.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- CONFIGURACIÓN DE JWT ---
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]!);
+
 // 1. SERVICIOS DE SISTEMA
-builder.Services.AddControllers(); // Habilita el uso de Controladores
+builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 // 2. BASE DE DATOS (SQLite)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 3. INYECCIÓN DE DEPENDENCIAS (Patrón Repositorio y Servicio)
+// 3. CONFIGURACIÓN DE AUTENTICACIÓN (JWT)
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+// 4. INYECCIÓN DE DEPENDENCIAS
 builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// 4. CONFIGURACIÓN DE CORS (Para desarrollo con Vite)
+// 5. CONFIGURACIÓN DE CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("VitePolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:5173") // Puerto por defecto de Vite
+        policy.WithOrigins("http://localhost:5173")
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -32,28 +60,25 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// 5. CONFIGURACIÓN DEL PIPELINE (Middleware)
+// 6. CONFIGURACIÓN DEL PIPELINE (Middleware)
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.UseCors("VitePolicy"); // Activa CORS solo en desarrollo
+    app.UseCors("VitePolicy");
 }
 
 app.UseHttpsRedirection();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
-// --- EL PUENTE CON EL FRONTEND ---
-// 6. Permitir que .NET sirva archivos como index.html, .js, .css
-app.UseDefaultFiles(); // Busca index.html por defecto
-app.UseStaticFiles();  // Sirve los archivos de wwwroot
-
-app.UseAuthorization();
+// --- EL ORDEN AQUÍ ES CRÍTICO ---
+app.UseAuthentication(); // Primero: ¿Quién eres? (Lee el Token)
+app.UseAuthorization();  // Segundo: ¿Qué puedes hacer?
 
 // 7. MAPEO DE RUTAS
-app.MapControllers(); // Mapea los controladores de la carpeta /Controllers
+app.MapControllers();
 
-// 8. FALLBACK (La magia del SPA)
-// Si el usuario recarga la página o entra a una ruta que no es de API,
-// .NET le envía el index.html de Vue para que Vue maneje el routing.
+// 8. FALLBACK PARA VUE
 app.MapFallbackToFile("index.html");
 
 app.Run();

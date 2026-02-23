@@ -2,11 +2,22 @@ using InventarioProyecto.Data;
 using InventarioProyecto.Models;
 using Microsoft.EntityFrameworkCore;
 using InventarioProyecto.Utils;
+using Microsoft.Extensions.Configuration;
 
 namespace InventarioProyecto.Repositories;
 
-public class AuthRepository(AppDbContext context) : IAuthRepository
+public class AuthRepository : IAuthRepository
 {
+    private readonly AppDbContext context;
+    private readonly Jwt jwt;
+
+    public AuthRepository(AppDbContext context, IConfiguration config)
+    {
+        this.context = context;
+        this.jwt = new Jwt(config);
+    }
+
+    // TODO: Pendiente crear esta validación del usuario
     public async Task<Usuario> AuthenticateAsync(string username, string password)
     {
         try
@@ -53,24 +64,56 @@ public class AuthRepository(AppDbContext context) : IAuthRepository
         }
     }
 
-    public async Task<Usuario> Login(string Nombre, String Password)
+    public async Task<UsuarioResponse> Login(string Email, String Password)
     {
         try
         {
-            var hashPassword = Bcrypt.HashPassword(Password);
-            var user = await context.Usuarios.FirstOrDefaultAsync(u => u.Nombre == Nombre && u.PasswordHash == hashPassword);
-            if (user != null)
+            // Buscar si existe el usuario
+            var usuario = await context.Usuarios.FirstOrDefaultAsync(u => u.Email == Email);
+            // Si no existe, lanzar una excepción
+            if (usuario == null)
             {
-                var sesionActualizada = await ActualizarAccesoUsuario(user);
-                if (!sesionActualizada)
-                {
-                    Console.WriteLine("Error al actualizar la sesión del usuario.");
-                }
-                return user;
+                throw new Exception("Credenciales inválidas.");
             }
             else
             {
-                throw new Exception("Credenciales inválidas.");
+                // Si la contraseña no es válida, lanzar una excepción
+                if (VerificarPassword(Password, usuario.PasswordHash) == false)
+                {
+                    throw new Exception("Credenciales inválidas.");
+                }
+                else
+                {
+                    var actualizado = await ActualizarAccesoUsuario(usuario);
+                    if (!actualizado)
+                    {
+                        throw new Exception("Error al actualizar el acceso del usuario.");
+                    }
+
+                    string token = jwt.GenerarToken(usuario);
+                    if (string.IsNullOrEmpty(token))
+                    {
+                        throw new Exception("Error al generar el token.");
+                    }
+
+                    UsuarioResponse response = new UsuarioResponse
+                    {
+                        Id = usuario.Id,
+                        Nombre = usuario.Nombre,
+                        Email = usuario.Email,
+                        PasswordHash = usuario.PasswordHash,
+                        Estado = usuario.Estado,
+                        FechaCreacion = usuario.FechaCreacion,
+                        UltimoAcceso = usuario.UltimoAcceso,
+                        RefreshToken = usuario.RefreshToken,
+                        RefreshTokenExpiryTime = usuario.RefreshTokenExpiryTime,
+                        SecurityStamp = usuario.SecurityStamp,
+                        Token = token
+                    };
+
+                    return response;
+
+                }
             }
         }
         catch (Exception ex)
@@ -80,6 +123,7 @@ public class AuthRepository(AppDbContext context) : IAuthRepository
         }
     }
 
+    // TODO: Pendiente crear esta petición
     public async Task<String> SolicitarRecuperacion(string email)
     {
         try
@@ -100,22 +144,22 @@ public class AuthRepository(AppDbContext context) : IAuthRepository
 
     private async Task<bool> ActualizarAccesoUsuario(Usuario user)
     {
-        var actualizado = new Usuario
+        try
         {
-            Id = user.Id,
-            Nombre = user.Nombre,
-            Email = user.Email,
-            PasswordHash = user.PasswordHash,
-            Estado = user.Estado,
-            FechaCreacion = user.FechaCreacion,
-            UltimoAcceso = DateTime.UtcNow,
-            RefreshToken = user.RefreshToken,
-            RefreshTokenExpiryTime = user.RefreshTokenExpiryTime,
-            SecurityStamp = user.SecurityStamp
-        };
+            user.UltimoAcceso = DateTime.UtcNow;
+            context.Usuarios.Update(user);
+            var result = await context.SaveChangesAsync();
+            return result > 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error en ActualizarAccesoUsuario: {ex.Message}");
+            return false;
+        }
+    }
 
-        context.Usuarios.Update(actualizado);
-        var result = await context.SaveChangesAsync();
-        return result > 0;
+    private bool VerificarPassword(string password, string passwordHash)
+    {
+        return Bcrypt.VerifyPassword(password, passwordHash);
     }
 }
