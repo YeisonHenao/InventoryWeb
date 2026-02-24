@@ -10,11 +10,13 @@ public class AuthRepository : IAuthRepository
 {
     private readonly AppDbContext context;
     private readonly Jwt jwt;
+    private readonly Bcrypt bcrypt;
 
     public AuthRepository(AppDbContext context, IConfiguration config)
     {
         this.context = context;
         this.jwt = new Jwt(config);
+        this.bcrypt = new Bcrypt();
     }
 
     // TODO: Pendiente crear esta validación del usuario
@@ -42,7 +44,7 @@ public class AuthRepository : IAuthRepository
             var existe = await context.Usuarios.AnyAsync(u => u.Email == entity.Email);
             if (existe)
             {
-                throw new Exception("El correo electrónico ya está registrado.");
+                throw new AuthException(ErrorTypesAuth.EmailAlreadyRegistered, "El correo electrónico ya está registrado.");
             }
 
             var hashPassword = Bcrypt.HashPassword(entity.Password);
@@ -73,27 +75,27 @@ public class AuthRepository : IAuthRepository
             // Si no existe, lanzar una excepción
             if (usuario == null)
             {
-                throw new Exception("Credenciales inválidas.");
+                throw new AuthException(ErrorTypesAuth.UserNotFound, "Usuario no encontrado.");
             }
             else
             {
                 // Si la contraseña no es válida, lanzar una excepción
-                if (VerificarPassword(Password, usuario.PasswordHash) == false)
+                if (Bcrypt.VerifyPassword(Password, usuario.PasswordHash) == false)
                 {
-                    throw new Exception("Credenciales inválidas.");
+                    throw new AuthException(ErrorTypesAuth.InvalidCredentials, "Credenciales inválidas.");
                 }
                 else
                 {
                     var actualizado = await ActualizarAccesoUsuario(usuario);
                     if (!actualizado)
                     {
-                        throw new Exception("Error al actualizar el acceso del usuario.");
+                        throw new AuthException(ErrorTypesAuth.UserAccessUpdateFailed, "Error al actualizar el acceso del usuario.");
                     }
 
                     string token = jwt.GenerarToken(usuario);
                     if (string.IsNullOrEmpty(token))
                     {
-                        throw new Exception("Error al generar el token.");
+                        throw new AuthException(ErrorTypesAuth.TokenGenerationFailed, "Error al generar el token de autenticación.");
                     }
 
                     UsuarioResponse response = new UsuarioResponse
@@ -105,9 +107,6 @@ public class AuthRepository : IAuthRepository
                         Estado = usuario.Estado,
                         FechaCreacion = usuario.FechaCreacion,
                         UltimoAcceso = usuario.UltimoAcceso,
-                        RefreshToken = usuario.RefreshToken,
-                        RefreshTokenExpiryTime = usuario.RefreshTokenExpiryTime,
-                        SecurityStamp = usuario.SecurityStamp,
                         Token = token
                     };
 
@@ -118,8 +117,7 @@ public class AuthRepository : IAuthRepository
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error en Login: {ex.Message}");
-            return null;
+            throw;
         }
     }
 
@@ -130,15 +128,15 @@ public class AuthRepository : IAuthRepository
         {
             var user = await context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
-                return "Usuario no encontrado";
+            {
+                throw new AuthException(ErrorTypesAuth.EmailNotRegistered, "El correo electrónico no está registrado.");
+            }
 
-            // Aquí podrías generar un token de recuperación y enviarlo por correo
             return "Correo de recuperación enviado";
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error en SolicitarRecuperacion: {ex.Message}");
-            return "Error al solicitar recuperación";
+            throw;
         }
     }
 
@@ -156,10 +154,5 @@ public class AuthRepository : IAuthRepository
             Console.WriteLine($"Error en ActualizarAccesoUsuario: {ex.Message}");
             return false;
         }
-    }
-
-    private bool VerificarPassword(string password, string passwordHash)
-    {
-        return Bcrypt.VerifyPassword(password, passwordHash);
     }
 }

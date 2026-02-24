@@ -22,16 +22,6 @@ public class Usuario
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
     public DateTime? UltimoAcceso { get; set; }
-
-    /* --- CAMPOS PARA JWT MODERNO --- */
-
-    // Se usa para refrescar el Access Token sin pedir credenciales
-    public string? RefreshToken { get; set; } 
-
-    public DateTime? RefreshTokenExpiryTime { get; set; }
-
-    // Útil para invalidar todas las sesiones si el usuario cambia la clave
-    public string SecurityStamp { get; set; } = Guid.NewGuid().ToString();
 }
 
 public class UsuarioResponse : Usuario

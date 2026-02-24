@@ -3,7 +3,7 @@ using BCrypt;
 
 namespace InventarioProyecto.Utils;
 
-public static class Bcrypt
+public class Bcrypt
 {
     public static string HashPassword(string password)
     {

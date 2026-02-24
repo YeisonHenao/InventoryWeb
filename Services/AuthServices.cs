@@ -5,6 +5,14 @@ namespace InventarioProyecto.Services;
 
 public class AuthService(IAuthRepository repository) : IAuthService
 {
+
+    /// <summary>
+    /// Función de login que autentica a un usuario utilizando su correo electrónico y contraseña. Si las credenciales son válidas, devuelve un objeto de respuesta con el estado, mensaje y datos del usuario. Si las credenciales son inválidas o ocurre algún error durante el proceso, lanza una excepción con un mensaje descriptivo del error.
+    /// </summary>
+    /// <param name="email">Correo del usuario</param>
+    /// <param name="password">Contraseña del usuario</param>
+    /// <returns>Retorna un response con el modelo UsuarioResponse</returns>
+    /// <exception cref="Exception">Si hay alguna falla se genera una excepción capturada</exception>
     public async Task<Response> Login(string email, string password)
     {
         try
@@ -21,7 +29,7 @@ public class AuthService(IAuthRepository repository) : IAuthService
         }
         catch (Exception ex)
         {
-            throw new Exception("Error durante el login: " + ex.Message);
+            throw;
         }
     }
 
@@ -47,20 +55,20 @@ public class AuthService(IAuthRepository repository) : IAuthService
         }
         catch (Exception ex)
         {
-            throw new Exception("Error durante el registro: " + ex.Message);
+            throw;
         }
     }
 
-    public Task<string> SolicitarRecuperacion(string email)
+    public Task<Response> SolicitarRecuperacion(string email)
     {
         try
         {
             var result = repository.SolicitarRecuperacion(email);
-            return Task.FromResult("Correo");
+            return Task.FromResult(new Response { status = 1, Message = "Correo de recuperación enviado", Data = null });
         }
         catch (Exception ex)
         {
-            throw new Exception("Error durante la solicitud de recuperación: " + ex.Message);
+            throw;
         }
     }
 }
