@@ -3,11 +3,13 @@ namespace InventarioProyecto.Constants;
 public static class AuthMessages
 {
     public const string EmailAlreadyExists = "El correo electrónico ya está registrado.";
+    public const string EmailNotRegistered = "El correo electrónico no está registrado.";
     public const string UserNotFound = "Usuario no encontrado.";
     public const string InvalidPassword = "Contraseña incorrecta.";
     public const string RegistrationSuccess = "Registro exitoso.";
     public const string LoginSuccess = "Inicio de sesión exitoso.";
-
+    public const string ErrorGeneratingToken = "Error al generar el token.";
+    public const string ErrorUpdatingUserAccess = "Error al actualizar el acceso del usuario.";
 }
 
 public static class GenericMessages

@@ -52,7 +52,10 @@ public class AuthRepository : IAuthRepository
             {
                 Nombre = entity.Nombre,
                 PasswordHash = hashPassword,
-                Email = entity.Email
+                Email = entity.Email,
+                Estado = 1,
+                FechaCreacion = DateTime.UtcNow,
+                UltimoAcceso = null
             };
 
             await context.Usuarios.AddAsync(user);

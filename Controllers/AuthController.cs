@@ -1,6 +1,7 @@
 using InventarioProyecto.Models;
 using InventarioProyecto.Services;
 using Microsoft.AspNetCore.Mvc;
+using InventarioProyecto.Constants;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -18,8 +19,8 @@ public class AuthController(IAuthService authService) : ControllerBase
         {
             var messageError = ex.Tipo switch
             {
-                ErrorTypesAuth.EmailAlreadyRegistered => new Response { status = 0, Message = "El correo electrónico ya existe", Data = null },
-                _ => new Response { status = 0, Message = "Algo salio mal con el registro", Data = null }
+                ErrorTypesAuth.EmailAlreadyRegistered => new Response { status = 0, Message = AuthMessages.EmailAlreadyExists, Data = null },
+                _ => new Response { status = 0, Message = GenericMessages.SomethingWentWrong, Data = null }
             };
 
             return ex.Tipo switch
@@ -42,13 +43,13 @@ public class AuthController(IAuthService authService) : ControllerBase
         {
             var messageError = ex.Tipo switch
             {
-                ErrorTypesAuth.EmailAlreadyRegistered => new Response { status = 0, Message = "El correo electrónico ya está registrado", Data = null },
-                ErrorTypesAuth.InvalidCredentials => new Response { status = 0, Message = "Credenciales inválidas", Data = null },
-                ErrorTypesAuth.UserNotFound => new Response { status = 0, Message = "Usuario no encontrado", Data = null },
-                ErrorTypesAuth.PasswordMismatch => new Response { status = 0, Message = "Contraseña incorrecta", Data = null },
-                ErrorTypesAuth.TokenGenerationFailed => new Response { status = 0, Message = "Error al generar el token", Data = null },
-                ErrorTypesAuth.UserAccessUpdateFailed => new Response { status = 0, Message = "Error al actualizar el acceso del usuario", Data = null },
-                _ => new Response { status = 0, Message = "Error de autenticación", Data = null }
+                ErrorTypesAuth.EmailAlreadyRegistered => new Response { status = 0, Message = AuthMessages.EmailAlreadyExists, Data = null },
+                ErrorTypesAuth.InvalidCredentials => new Response { status = 0, Message = AuthMessages.InvalidPassword, Data = null },
+                ErrorTypesAuth.UserNotFound => new Response { status = 0, Message = AuthMessages.UserNotFound, Data = null },
+                ErrorTypesAuth.PasswordMismatch => new Response { status = 0, Message = AuthMessages.InvalidPassword, Data = null },
+                ErrorTypesAuth.TokenGenerationFailed => new Response { status = 0, Message = AuthMessages.ErrorGeneratingToken, Data = null },
+                ErrorTypesAuth.UserAccessUpdateFailed => new Response { status = 0, Message = AuthMessages.ErrorUpdatingUserAccess, Data = null },
+                _ => new Response { status = 0, Message = GenericMessages.SomethingWentWrong, Data = null }
             };
 
             return ex.Tipo switch
@@ -66,19 +67,26 @@ public class AuthController(IAuthService authService) : ControllerBase
     }
 
     [HttpPost("RememberPassword")]
-    public async Task<Response> RememberPassword(string email)
+    public async Task<IActionResult> RememberPassword([FromBody]RememberPasswordDto request)
     {
         try
         {
-            var result = await authService.SolicitarRecuperacion(email);
-            return result;
+            var result = await authService.SolicitarRecuperacion(request.Email);
+            return Ok(result);
         }
         catch (AuthException ex)
         {
+            var messageError = ex.Tipo switch
+            {
+                ErrorTypesAuth.EmailNotRegistered => new Response { status = 0, Message = AuthMessages.EmailNotRegistered, Data= null},
+                _ => new Response { status= 0, Message= GenericMessages.SomethingWentWrong, Data = null}
+            };
+
+
             return ex.Tipo switch
             {
-                ErrorTypesAuth.EmailNotRegistered => new Response { status = 0, Message = "El correo electrónico no está registrado", Data = null },
-                _ => new Response { status = 0, Message = "Error al solicitar recuperación de contraseña", Data = null }
+                ErrorTypesAuth.EmailNotRegistered => Unauthorized(messageError),
+                _ => StatusCode(500, messageError)
             };
         }
     }
@@ -87,3 +95,8 @@ public class AuthController(IAuthService authService) : ControllerBase
 // DTOs (Data Transfer Objects) para recibir los datos del JSON
 public record UserDto(string Nombre, string Email, string Password);
 public record LoginDto(string Email, string Password);
+
+public class RememberPasswordDto
+{
+    public string Email { get; set; }
+}
