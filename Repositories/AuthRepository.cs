@@ -18,8 +18,7 @@ public class AuthRepository : IAuthRepository
         this.jwt = new Jwt(config);
         this.bcrypt = new Bcrypt();
     }
-
-    // TODO: Pendiente crear esta validación del usuario
+    
     public async Task<Usuario> AuthenticateAsync(string username, string password)
     {
         try

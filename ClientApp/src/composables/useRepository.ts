@@ -6,9 +6,9 @@ import { AxiosError } from 'axios';
 /**
  * Composable genérico para usar repositorios
  * Maneja loading, error y data de forma automática
- * @param repository - Instancia del repositorio a usar
+ * @param _repository - Instancia del repositorio a usar
  */
-export function useRepository<T extends BaseModel>(repository: BaseRepository<T>) {
+export function useRepository<T extends BaseModel>(_repository: BaseRepository<T>) {
     const data = ref<T | null>(null);
     const dataList = ref<T[]>([]);
     const loading = ref(false);
